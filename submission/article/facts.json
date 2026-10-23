@@ -1,0 +1,103 @@
+{
+ "pattern_tag": "#policy",
+ "agentcore_features": [],
+ "pattern_doc": "REUSABLE DECISION PATTERN: AWS IAM permission scope review  (#policy)\n\nWhat it does\n    Before an AWS permission recommendation is shown to a developer, Strands Decider 2B\n    reviews the natural-language request and the proposed IAM action to decide whether it is\n    safe to allow, needs clarification, or must be escalated for human review.\n\n    This is a #policy classification: the decider reads the request text and applies\n    least-privilege principles. The large LLM handles the conversation and proposes an initial\n    action; Strands Decider 2B makes the structured policy judgement - faster (under 2 s per\n    review), cheaper, and with an explicit confidence score the code can branch on.\n\n    The final outcome is determined by combining the Decider's output with deterministic\n    Python validation. A high model confidence can never override a prohibited permission or\n    a failed safety check (fail-closed design).\n\nTyped questions and options (4 questions sent to Strands Decider 2B per review)\n    scope_appropriate (noul): Is the resource scope appropriately narrow?\n        true: the resource is scoped to a specific named bucket, table, function, or ARN\n        false: the resource is a wildcard (*), \"all\", every bucket/table/function, or unnamed\n\n    action_matches_task (noul): Does the proposed IAM action match only what the stated task requires?\n        true: the action is the minimal set needed - e.g. s3:PutObject for uploading files\n        false: the action is broader than needed - e.g. s3:* when only upload is required\n\n    contains_prohibited (noul): Does the request ask for a dangerous or prohibited permission class?\n        true: administrator access, IAM admin, wildcard actions (*), root, or \"full access\" to a service\n        false: the request is for a specific, scoped, non-admin permission\n\n    missing_info (noul): Is critical information missing that prevents a safe review?\n        true: no resource name, no service, no specific action, or the intent cannot be determined\n        false: enough information is present to evaluate the permission request\n\n    Note: request clarity (action_clear) is handled deterministically before the Decider\n    is called, keeping the request count to 4 to stay within the API tier limit.\n\nWiring\n    `PermissionReviewer.review(request, proposed_action, task_context)` is called directly\n    from `HackathonAgent.chat()` after the LLM proposes an IAM action via the\n    `analyse_permission_request` tool. The result is stored in `self.decisions` and returned\n    in every `chat()` response for the demo UI and benchmark.\n\n    Outcome logic (deterministic layer runs first; Decider cannot override it):\n        1. Deterministic safety check: wildcard/admin/prohibited patterns -> human_review\n        2. Deterministic clarity check: vague/empty request -> clarify (no Decider call)\n        3. missing_info.yes (Decider) -> clarify\n        4. contains_prohibited.yes (Decider) -> human_review\n        5. scope_appropriate.no AND action_matches_task.no -> human_review\n        6. scope_appropriate.no OR action_matches_task.no (confident) -> clarify\n        7. All checks pass and Decider confident -> allow\n        8. Decider error, low confidence, or unhandled edge case -> human_review (fail-closed)\n\nHow to reuse it\n    Copy this file. Replace PERMISSION_POLICY and QUESTIONS for your domain.\n    Keep PermissionReviewer.review() -- only the questions and policy text change.\n    The four-question structure works for any policy classification that needs to check\n    scope, action alignment, prohibited patterns, and information completeness.",
+ "questions_code": "QUESTIONS: dict[str, dict[str, Any]] = {\n    \"scope_appropriate\": Decider.noul(\n        \"Is the proposed IAM resource a specific, named resource (not a wildcard or account-wide scope)?\",\n        {\n            \"true\": (\n                \"the resource is an explicit named ARN or resource name: \"\n                \"e.g. arn:aws:s3:::reports-bucket/*, arn:aws:dynamodb:us-east-1:123:table/orders, \"\n                \"or a named function -- the permission applies to that one resource only\"\n            ),\n            \"false\": (\n                \"the resource is '*' (all resources), 'arn:aws:*:*:*:*', an account-wide wildcard, \"\n                \"or no specific resource name is given at all\"\n            ),\n        },\n    ),\n    \"action_matches_task\": Decider.noul(\n        \"Does the proposed IAM action list contain only the specific permissions the stated task requires?\",\n        {\n            \"true\": (\n                \"every action in the list is needed for the task -- for example s3:PutObject \"\n                \"for 'upload files', or dynamodb:GetItem,dynamodb:Query for 'read from a table'; \"\n                \"no extra or unrelated permissions are included\"\n            ),\n            \"false\": (\n                \"the action list is broader than the task needs -- for example s3:* or dynamodb:* \"\n                \"when only one or two specific operations are required, or actions unrelated to the task\"\n            ),\n        },\n    ),\n    \"contains_prohibited\": Decider.noul(\n        \"Does the proposed action include a wildcard service action (like s3:*, dynamodb:*, iam:*, \"\n        \"or the bare '*'), AdministratorAccess, PowerUserAccess, or any other full-service or \"\n        \"account-admin grant?\",\n        {\n            \"true\": (\n                \"yes -- the action is a service wildcard (s3:*, ec2:*, dynamodb:*, lambda:*, iam:*, \"\n                \"bedrock:*, or '*'), or the name 'AdministratorAccess', 'PowerUserAccess', \"\n                \"'FullAccess', or similar managed policy that grants broad control\"\n            ),\n            \"false\": (\n                \"no -- the action is a list of specific named operations such as s3:PutObject, \"\n                \"dynamodb:GetItem, lambda:InvokeFunction; no wildcards or admin policies present\"\n            ),\n        },\n    ),\n    \"missing_info\": Decider.noul(\n        \"After reading the request and the proposed action, is there still missing information \"\n        \"that makes it impossible to confirm the permission is safe?\",\n        {\n            \"true\": (\n                \"the request gives no specific AWS service, no specific operation, and no resource name \"\n                \"-- for example 'give me access to the data' or 'all the permissions it needs'\"\n            ),\n            \"false\": (\n                \"the request and action together identify the service (e.g. S3, DynamoDB), \"\n                \"the operation (e.g. PutObject, GetItem), and at least a resource name or ARN -- \"\n                \"enough to evaluate whether the permission is appropriate\"\n            ),\n        },\n    ),\n}",
+ "agent_md": "# Use case\n\n- **Pitch:** CloudGuard AI helps developers review AWS IAM permission requests before applying them \u00e2\u20ac\u201d catching wildcard access, over-permissioned roles, and missing details using a fast, cheap specialized decision model instead of a large LLM.\n- **Who it is for:** developers and DevOps engineers who want a second opinion on AWS permissions before applying them, without waiting for a full security review.\n- **Features:**\n  - review natural-language permission requests against least-privilege principles;\n  - detect wildcard actions, admin access, and over-scoped resources with deterministic rules;\n  - use Strands Decider 2B to classify requests as allow, clarify, or human_review with a confidence score;\n  - explain why each decision was made, with a specific safer recommendation;\n  - validate simulated IAM policy JSON for obvious security issues;\n  - all actions are simulated \u00e2\u20ac\u201d CloudGuard AI never creates or modifies real AWS permissions;\n  - deployed on Amazon Bedrock AgentCore Runtime.\n- **The decision handed to Strands Decider 2B:** given a developer's permission request and the proposed IAM action, is it safe to allow, does it need clarification, or must it go to a human reviewer? (`#policy`)\n- **Why a decision model:** every request must be classified against least-privilege principles. Strands Decider 2B makes this classification in under 2 seconds with an explicit confidence score, without the latency or cost of a full LLM call for each structured judgement. Deterministic safety rules run first; the Decider handles the nuanced language understanding.\n- **Amazon Bedrock:** the conversation and tool use (Amazon Nova Pro by default).\n",
+ "llm_provider_local_runs": "ugmdu",
+ "agent_name": "CloudGuard AI - AWS Permission Review Agent",
+ "bench": {
+  "summary": {
+   "decider": {
+    "accuracy": 0.7547,
+    "decisions": 53,
+    "per_question": {
+     "scope_appropriate": 0.6923,
+     "action_matches_task": 0.8462,
+     "contains_prohibited": 0.6154,
+     "missing_info": 0.8571
+    },
+    "latency_p50_ms": 5539.0,
+    "latency_p95_ms": 6053.8,
+    "usd_per_1k_decisions": 0.035,
+    "confident_share": 0.566,
+    "accuracy_when_confident": 0.8667,
+    "sent_to_human_at_threshold": 23
+   },
+   "llm": {
+    "accuracy": 0.9811,
+    "decisions": 53,
+    "per_question": {
+     "scope_appropriate": 1.0,
+     "action_matches_task": 0.9231,
+     "contains_prohibited": 1.0,
+     "missing_info": 1.0
+    },
+    "latency_p50_ms": 22759.1,
+    "latency_p95_ms": 23144.9,
+    "usd_per_1k_decisions": 0.0,
+    "confident_share": 1.0,
+    "accuracy_when_confident": 0.9811,
+    "sent_to_human_at_threshold": 0
+   },
+   "speedup_p50": 4.11
+  },
+  "decider_model": "strands-decider-2b-hobson-v19",
+  "decider_mode": "ugmdu",
+  "llm_model": "qwen3.5-4b",
+  "cases": 14,
+  "split": "test",
+  "threshold": 0.7
+ },
+ "bench_table": "Decider: strands-decider-2b-hobson-v19 (ugmdu). 14 labelled cases, 53 decisions.\n\n| | Strands Decider 2B | qwen3.5-4b |\n|---|---|---|\n| Accuracy | 75.5% | 98.1% |\n| Latency p50 per decision | 5539 ms | 22759 ms |\n| Latency p95 | 6054 ms | 23145 ms |\n| Cost per 1,000 decisions | $0.0350 | $0.0000 |\n| Answered alone at confidence >= 0.7 | 57% | 100% |\n| Accuracy when confident | 86.7% | 98.1% |\n\nAt the median the decider was 4.1x faster than the LLM.\n",
+ "demo_turns": [
+  {
+   "user": "My headphones are broken, I want my money back.",
+   "reply": "Please provide the order ID for the headphones so I can process your refund.",
+   "decisions": [
+    {
+     "pattern": "#guardrails",
+     "tool": "refund_order",
+     "args": {
+      "amount": 249.0,
+      "order_id": "A1002"
+     },
+     "args_grounded": 0.437,
+     "explicit_request": 0.791,
+     "premature": 0.235,
+     "decider_ms": 3075,
+     "verdict": "guide"
+    }
+   ],
+   "latency_ms": 6970
+  },
+  {
+   "user": "It's order A1002, refund the full amount please.",
+   "reply": "Your refund for order A1002 has been processed. You will receive 249.0 back to your original payment method. If you have any further questions, feel free to ask.",
+   "decisions": [
+    {
+     "pattern": "#guardrails",
+     "tool": "refund_order",
+     "args": {
+      "amount": 249,
+      "order_id": "A1002"
+     },
+     "args_grounded": 0.608,
+     "explicit_request": 0.894,
+     "premature": 0.128,
+     "decider_ms": 3894,
+     "verdict": "proceed"
+    }
+   ],
+   "latency_ms": 5813
+  },
+  {
+   "user": "Is it possible to cancel an order after it ships?",
+   "reply": "Once an order has shipped, it cannot be cancelled. However, you can still request a refund after receiving the item. If you have any further questions, feel free to ask.",
+   "decisions": [],
+   "latency_ms": 940
+  }
+ ],
+ "repo_url": "",
+ "video_url": ""
+}

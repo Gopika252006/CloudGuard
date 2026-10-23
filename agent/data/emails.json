@@ -1,0 +1,107 @@
+[
+  {
+    "id": "E001",
+    "from": "alice@work.com",
+    "subject": "Q3 budget review meeting — Thursday 3 pm",
+    "body": "Hi team, please join the Q3 budget review this Thursday at 3 pm in conference room B. Bring your department numbers. Agenda attached.",
+    "folder": "inbox"
+  },
+  {
+    "id": "E002",
+    "from": "noreply@shopdeals.com",
+    "subject": "🔥 Flash Sale! 70% off everything — today only!",
+    "body": "Don't miss our biggest sale of the year. Use code FLASH70 at checkout. Shop now at shopdeals.com. Offer expires midnight tonight.",
+    "folder": "promotions"
+  },
+  {
+    "id": "E003",
+    "from": "security-alert@fake-bank.xyz",
+    "subject": "URGENT: Your account has been suspended",
+    "body": "Your bank account has been suspended due to suspicious activity. Click here immediately to verify your identity and restore access: http://fake-bank.xyz/verify",
+    "folder": "spam"
+  },
+  {
+    "id": "E004",
+    "from": "priya@friend.com",
+    "subject": "Weekend hiking plans",
+    "body": "Hey! Are you free this Saturday for the trail hike? I was thinking we leave early around 6 am. Let me know if you're in!",
+    "folder": "inbox"
+  },
+  {
+    "id": "E005",
+    "from": "newsletter@techdigest.io",
+    "subject": "Your weekly tech digest — AI, cloud, and dev tools",
+    "body": "This week in tech: OpenAI announces GPT-5, AWS launches new EC2 instances, and the top 10 VS Code extensions of 2026. Read more at techdigest.io/weekly.",
+    "folder": "promotions"
+  },
+  {
+    "id": "E006",
+    "from": "dr.smith@clinic.org",
+    "subject": "Your appointment confirmation — Oct 22, 10 am",
+    "body": "This is a confirmation for your appointment with Dr. Smith on October 22 at 10:00 am. Please arrive 10 minutes early. Reply to reschedule.",
+    "folder": "inbox"
+  },
+  {
+    "id": "E007",
+    "from": "prize-winner@lottery-notif.biz",
+    "subject": "You have WON $1,000,000 — claim now!",
+    "body": "Congratulations! You have been randomly selected as the winner of our international lottery. To claim your prize, send your bank details and a processing fee of $50 to lottery-notif.biz/claim.",
+    "folder": "spam"
+  },
+  {
+    "id": "E008",
+    "from": "arun@colleague.com",
+    "subject": "Review request: design doc for auth service",
+    "body": "Hi, I've shared the design doc for the new auth service in Confluence. Could you review sections 3 and 4 before Friday's sync? Your feedback on the token expiry strategy would be especially helpful.",
+    "folder": "inbox"
+  },
+  {
+    "id": "E009",
+    "from": "deals@amazon-offers.email",
+    "subject": "Based on your browsing: deals you'll love 🛒",
+    "body": "We noticed you browsed laptops recently. Here are today's top picks: Dell XPS 15 at 15% off, MacBook Air M3 bundle, and Logitech accessories starting at $19. Shop now.",
+    "folder": "promotions"
+  },
+  {
+    "id": "E010",
+    "from": "irs-refund@tax-gov.co",
+    "subject": "IRS Tax Refund Pending — Action Required",
+    "body": "The IRS has identified a tax refund of $842 owed to you. To process your refund, provide your Social Security Number and bank routing number at: tax-gov.co/refund-claim",
+    "folder": "spam"
+  },
+  {
+    "id": "E011",
+    "from": "meena@family.com",
+    "subject": "Diwali party at our place — save the date!",
+    "body": "Hi everyone! We're hosting a Diwali celebration on November 1st at 7 pm. Please save the date and RSVP by Oct 25. Can't wait to see you all!",
+    "folder": "inbox"
+  },
+  {
+    "id": "E012",
+    "from": "billing@netlify.com",
+    "subject": "Your invoice for October 2026",
+    "body": "Your Netlify invoice for October 2026 is ready. Amount due: $19.00. Payment will be charged to your card on file on Oct 31. View invoice at netlify.com/billing.",
+    "folder": "inbox"
+  },
+  {
+    "id": "E013",
+    "from": "info@gym-promo.fit",
+    "subject": "Join now — 3 months free with annual membership!",
+    "body": "New year, new you! Sign up for an annual gym membership this month and get 3 months absolutely free. Classes included. Use code FIT3FREE at signup.",
+    "folder": "promotions"
+  },
+  {
+    "id": "E014",
+    "from": "crypto-profit@richquick.net",
+    "subject": "Make $5000 a day trading crypto — secret strategy revealed",
+    "body": "Our insiders have cracked the code on crypto. With just $500 to start, our bot made 3200% returns last month. Limited spots. Sign up now before this is taken down.",
+    "folder": "spam"
+  },
+  {
+    "id": "E015",
+    "from": "hr@company.com",
+    "subject": "Annual performance review schedule",
+    "body": "Dear team, annual performance reviews will be held from November 3–14. Your manager will reach out to schedule your session. Please prepare your self-assessment form by October 28.",
+    "folder": "inbox"
+  }
+]

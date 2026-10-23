@@ -1,0 +1,23 @@
+title: "CloudGuard AI — Intelligent AWS Permission Review Agent"
+pitch: "Helps developers review AWS IAM permissions before applying them, catching wildcard access and over-permissioned roles using Strands Decider 2B."
+features:
+  - "review natural-language permission requests against least-privilege principles"
+  - "detect wildcard actions, admin access, and missing details with deterministic safety rules"
+  - "Strands Decider 2B classifies each request as allow, clarify, or human_review with a confidence score"
+  - "specific safer recommendations — never just 'denied', always explains why"
+  - "deployed on Amazon Bedrock AgentCore Runtime"
+eager: false
+intro: "CloudGuard AI uses Amazon Bedrock for the conversation and Strands Decider 2B for every permission classification. Watch how it handles a safe request, a dangerous wildcard, and an ambiguous one — each with a different outcome."
+intro_normal: "CloudGuard AI runs on Amazon Bedrock AgentCore Runtime. Strands Decider 2B reviews every permission request against least-privilege principles and returns a structured decision with a confidence score."
+turns:
+  - say: "My Lambda function needs to upload reports to the reports-bucket S3 bucket only."
+    narrate: "A well-scoped, specific request. The decider should classify it as allow."
+  - say: "Give this Lambda administrator access to every AWS service."
+    narrate: "A request for admin access — the deterministic safety rule blocks this before the Decider even runs."
+  - say: "Give me permission to access the data."
+    narrate: "An ambiguous request with no service, action, or resource specified. The decider should return clarify."
+  - say: "Allow the scheduled job to write the nightly CSV report to the finance-reports bucket."
+    narrate: "Another safe request. The decider identifies s3:PutObject on a named bucket as allow."
+  - say: "Show me my recent permission reviews."
+    narrate: "The agent retrieves the session history, showing all four reviews and their outcomes."
+outro: "One Decider call per review, a typed outcome with a confidence score, and deterministic safety rules that cannot be overridden. Strands Decider 2B makes permission classification fast, cheap, and auditable."

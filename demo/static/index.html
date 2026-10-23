@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloudGuard AI — Permission Review</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #070d1a;
+  --surface: #0d1629;
+  --surface2: #111e35;
+  --border: #1c2e4a;
+  --ink: #e2eaf6;
+  --muted: #7a8fac;
+  --cyan: #22d3ee;
+  --green: #10b981;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --orange: #f97316;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.6 Inter, system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* ─── Header ─────────────────────────────────────────────── */
+header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+  display: flex; align-items: center; justify-content: center; font-size: 17px;
+  box-shadow: 0 0 18px rgba(14,165,233,.4);
+}
+.logo-name { font-size: 16px; font-weight: 700; }
+.logo-sub  { font-size: 11px; color: var(--muted); }
+.header-meta { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.meta-chip {
+  font-size: 11px; color: var(--muted); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 3px 9px;
+  white-space: nowrap;
+}
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: var(--green); box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+/* ─── Page wrapper ───────────────────────────────────────── */
+.page-wrap {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: grid;
+  /* review column | decider sidebar */
+  grid-template-columns: 1fr 360px;
+  gap: 0 28px;
+  align-items: start;
+}
+
+/* ─── Review column ──────────────────────────────────────── */
+.review-col {
+  padding: 32px 0 48px;
+  min-width: 0;          /* allow shrink inside grid */
+}
+.page-heading {
+  font-size: 22px; font-weight: 700; margin-bottom: 4px;
+}
+.page-subheading {
+  font-size: 13px; color: var(--muted); margin-bottom: 28px; max-width: 620px;
+}
+
+/* ─── Form elements ──────────────────────────────────────── */
+.form-label {
+  display: block; font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px;
+}
+textarea {
+  width: 100%;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px; font: 14px/1.5 Inter, sans-serif;
+  resize: vertical; min-height: 110px;
+  transition: border-color .15s, box-shadow .15s;
+  outline: none;
+}
+textarea:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(34,211,238,.1);
+}
+.validation-error {
+  font-size: 13px; color: var(--red); margin-top: 6px; display: none;
+}
+.validation-error.visible { display: block; }
+
+.examples-label { margin: 10px 0 6px; font-size: 12px; color: var(--muted); }
+.example-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.ex-btn {
+  font-size: 12px; padding: 5px 12px; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--muted); cursor: pointer; transition: all .15s;
+}
+.ex-btn:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(34,211,238,.07); }
+
+.warning-box {
+  font-size: 12px; padding: 10px 14px; border-radius: 8px; margin-bottom: 18px;
+  background: rgba(249,115,22,.07); border: 1px solid rgba(249,115,22,.22);
+  color: #fdba74; line-height: 1.5;
+}
+
+.review-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 26px;
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  border: none; border-radius: 10px;
+  color: #fff; font: 600 14px Inter, sans-serif;
+  cursor: pointer; transition: opacity .15s;
+}
+.review-btn:hover:not(:disabled) { opacity: .87; }
+.review-btn:disabled { opacity: .42; cursor: not-allowed; }
+.spinner {
+  width: 15px; height: 15px;
+  border: 2px solid rgba(255,255,255,.25); border-top-color: #fff;
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Result card ────────────────────────────────────────── */
+.result-card {
+  margin-top: 24px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+}
+.result-header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  padding: 15px 20px; border-bottom: 1px solid var(--border);
+}
+.result-header-label { font-weight: 600; font-size: 14px; }
+.outcome-pill {
+  font-size: 13px; font-weight: 700; padding: 4px 15px; border-radius: 99px;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: .03em;
+}
+.pill-allow        { background: rgba(16,185,129,.18); color: var(--green); border: 1px solid var(--green); }
+.pill-clarify      { background: rgba(245,158,11,.18); color: var(--amber); border: 1px solid var(--amber); }
+.pill-human_review { background: rgba(239,68,68,.18);  color: var(--red);   border: 1px solid var(--red);   }
+.pill-unavailable  { background: rgba(122,143,172,.18);color: var(--muted); border: 1px solid var(--muted); }
+
+.result-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.result-section h4 {
+  font-size: 10px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .09em; margin-bottom: 6px;
+}
+.result-section p { font-size: 14px; line-height: 1.65; }
+.result-section .code-block {
+  font: 13px/1.5 'JetBrains Mono', monospace;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 14px;
+  word-break: break-all; color: var(--cyan);
+}
+.conf-track {
+  height: 8px; background: var(--surface2); border-radius: 99px;
+  overflow: hidden; border: 1px solid var(--border);
+}
+.conf-fill { height: 100%; border-radius: 99px; transition: width .4s; }
+.conf-label { font-size: 12px; color: var(--muted); margin-top: 5px; }
+
+.banner {
+  font-size: 13px; padding: 11px 15px; border-radius: 8px;
+  line-height: 1.55; font-weight: 500;
+}
+.banner-red    { background: rgba(239,68,68,.08);  border: 1px solid rgba(239,68,68,.25);  color: #f87171; }
+.banner-amber  { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25); color: #fcd34d; }
+.banner-orange { background: rgba(249,115,22,.07); border: 1px solid rgba(249,115,22,.22); color: #fdba74; font-size:12px; font-weight:400; }
+
+/* ─── Decider sidebar ────────────────────────────────────── */
+.decider-col {
+  padding: 32px 0 48px;
+  position: sticky; top: 62px;
+  max-height: calc(100vh - 62px);
+  display: flex; flex-direction: column;
+  min-width: 0;
+}
+.decider-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+  display: flex; flex-direction: column;
+  flex: 1; min-height: 0;
+  max-height: calc(100vh - 120px);
+}
+.decider-header {
+  padding: 13px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.decider-header h2 {
+  font-size: 12px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .08em;
+}
+.dec-count { font-size: 12px; color: var(--muted); }
+#dec {
+  flex: 1; overflow-y: auto; padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.dec-empty { color: var(--muted); text-align: center; padding: 28px 16px; font-size: 13px; }
+.d {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px; animation: pop .25s ease;
+}
+@keyframes pop { from{transform:scale(.97);opacity:.15} to{transform:none;opacity:1} }
+.d-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; }
+.d-title { font-size: 12px; font-weight: 600; }
+.d-tag {
+  font: 11px 'JetBrains Mono', monospace; padding: 2px 8px;
+  border-radius: 99px; border: 1px solid var(--border);
+}
+.d-tag.allow       { color: var(--green); border-color: var(--green); }
+.d-tag.clarify     { color: var(--amber); border-color: var(--amber); }
+.d-tag.human_review{ color: var(--red);   border-color: var(--red);   }
+.d-tag.review      { color: var(--amber); border-color: var(--amber); }
+.d-tag.proceed     { color: var(--green); border-color: var(--green); }
+.d-tag.block       { color: var(--red);   border-color: var(--red);   }
+.prob-row {
+  display: grid; grid-template-columns: 130px 1fr 40px; gap: 6px;
+  align-items: center; font: 11px 'JetBrains Mono', monospace; margin: 3px 0;
+}
+.prob-bar { height: 7px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.prob-fill { height: 100%; border-radius: 99px; }
+.d-meta {
+  font: 10px 'JetBrains Mono', monospace; color: var(--muted);
+  margin-top: 7px; word-break: break-all;
+}
+.decider-credit {
+  padding: 9px 16px; border-top: 1px solid var(--border);
+  font-size: 10px; color: var(--muted); text-align: center; flex-shrink: 0;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+/* tablet: sidebar moves below the form */
+@media (max-width: 860px) {
+  .page-wrap {
+    grid-template-columns: 1fr;
+    max-width: 680px;
+  }
+  .decider-col {
+    padding-top: 0;
+    position: static;
+    max-height: none;
+  }
+  .decider-panel {
+    max-height: 340px;
+    margin-bottom: 32px;
+  }
+}
+/* mobile */
+@media (max-width: 520px) {
+  .page-wrap { padding: 0 16px; }
+  header { padding: 11px 16px; }
+  .header-meta { display: none; }
+  .page-heading { font-size: 18px; }
+  .review-col { padding: 22px 0 32px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon" aria-hidden="true">&#x1F6E1;</div>
+    <div>
+      <div class="logo-name" id="agent-name">CloudGuard AI</div>
+      <div class="logo-sub">AWS Permission Review Agent</div>
+    </div>
+  </div>
+  <div class="header-meta">
+    <span class="meta-chip" id="meta-llm">LLM: loading…</span>
+    <span class="meta-chip" id="meta-decider">Decider: loading…</span>
+    <span class="meta-chip" id="meta-target">local</span>
+    <span class="status-dot" title="Online" aria-label="Service online"></span>
+  </div>
+</header>
+
+<div class="page-wrap">
+
+  <!-- ── Review column ── -->
+  <main class="review-col" id="main-content">
+    <h1 class="page-heading">CloudGuard AI &mdash; Permission Review</h1>
+    <p class="page-subheading">
+      Describe your AWS permission request in plain language. CloudGuard AI will analyse it
+      using Strands Decider 2B and recommend the least-privilege IAM action.
+    </p>
+
+    <label class="form-label" for="req-input">Describe the permission request</label>
+    <textarea
+      id="req-input"
+      rows="4"
+      placeholder="e.g. My Lambda function needs to upload reports to the reports-bucket S3 bucket only."
+      aria-required="true"
+      aria-describedby="req-validation"
+    ></textarea>
+    <div id="req-validation" class="validation-error" role="alert" aria-atomic="true"></div>
+
+    <p class="examples-label">Quick examples:</p>
+    <div class="example-btns" role="group" aria-label="Example permission requests">
+      <button class="ex-btn" data-ex="safe"      aria-label="Load safe and specific example">Safe &amp; specific</button>
+      <button class="ex-btn" data-ex="ambiguous" aria-label="Load ambiguous example">Ambiguous</button>
+      <button class="ex-btn" data-ex="admin"     aria-label="Load admin access example">Admin access</button>
+      <button class="ex-btn" data-ex="wildcard"  aria-label="Load wildcard example">Wildcard</button>
+      <button class="ex-btn" data-ex="missing"   aria-label="Load missing details example">Missing details</button>
+    </div>
+
+    <div class="warning-box" role="note">
+      CloudGuard AI never creates, modifies, or applies real AWS IAM permissions.
+      All results are recommendations only and must be reviewed by your security team.
+    </div>
+
+    <button class="review-btn" id="review-btn" onclick="submitReview()">
+      <span id="btn-icon" aria-hidden="true">&#x1F50D;</span>
+      <span id="btn-text">Review Permission</span>
+    </button>
+
+    <div id="result-area" role="region" aria-live="polite" aria-label="Review result"></div>
+  </main>
+
+  <!-- ── Decider sidebar ── -->
+  <aside class="decider-col" aria-label="Strands Decider 2B live decisions">
+    <div class="decider-panel">
+      <div class="decider-header">
+        <h2>Strands Decider 2B</h2>
+        <span class="dec-count" id="dec-count" aria-live="polite">0 decisions</span>
+      </div>
+      <div id="dec" aria-live="polite">
+        <p class="dec-empty">Decisions appear here as the agent reviews permissions.</p>
+      </div>
+      <div class="decider-credit">Built with the AWS User Group Madurai Strands Decider hackathon kit</div>
+    </div>
+  </aside>
+
+</div><!-- .page-wrap -->
+
+<script>
+const EXAMPLES = {
+  safe:      "My Lambda function needs to upload reports to the reports-bucket S3 bucket only.",
+  ambiguous: "Give my application all the permissions it needs.",
+  admin:     "Give this Lambda administrator access to every AWS service.",
+  wildcard:  "Allow s3:* on every S3 resource.",
+  missing:   "Give me permission to access the data.",
+};
+
+let _inFlight = false;
+let decCount  = 0;
+
+const esc = s => String(s ?? "").replace(/[&<>"']/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $   = id => document.getElementById(id);
+
+// Load header info
+fetch("/api/info").then(r => r.json()).then(i => {
+  $("agent-name").textContent  = i.agent   || "CloudGuard AI";
+  $("meta-llm").textContent    = "LLM: "     + (i.llm     || "—");
+  $("meta-decider").textContent= "Decider: " + (i.decider || "—");
+  $("meta-target").textContent = i.target === "agentcore" ? "AgentCore Runtime" : "local";
+}).catch(() => {});
+
+// Example buttons
+document.querySelectorAll(".ex-btn").forEach(b =>
+  b.addEventListener("click", () => {
+    $("req-input").value = EXAMPLES[b.dataset.ex] || "";
+    $("req-input").focus();
+    clearError();
+  })
+);
+
+// Validation helpers
+function showError(msg) {
+  const el = $("req-validation");
+  el.textContent = msg;
+  el.classList.add("visible");
+  $("req-input").setAttribute("aria-invalid", "true");
+}
+function clearError() {
+  $("req-validation").classList.remove("visible");
+  $("req-input").removeAttribute("aria-invalid");
+}
+
+// Submit
+async function submitReview() {
+  if (_inFlight) return;
+
+  const msg = $("req-input").value.trim();
+  if (!msg) {
+    showError("Please describe the permission you need before submitting.");
+    $("req-input").focus();
+    return;
+  }
+  clearError();
+
+  _inFlight = true;
+  const btn = $("review-btn");
+  btn.disabled = true;
+  $("btn-icon").innerHTML = '<span class="spinner" role="status" aria-label="Reviewing"></span>';
+  $("btn-text").textContent = "Reviewing…";
+  $("result-area").innerHTML = "";
+
+  try {
+    const r   = await fetch("/api/chat", {
+      method: "POST",
+      headers: {"content-type": "application/json"},
+      body: JSON.stringify({message: msg}),
+    });
+    const out = await r.json();
+
+    if (out.error) {
+      showErrorCard(out.error, true);
+      return;
+    }
+
+    (out.decisions || []).forEach(renderDecision);
+
+    const primary = (out.decisions || []).find(d => d.outcome || d.verdict) || {};
+    const outcome = primary.outcome || primary.verdict || null;
+    const conf    = typeof primary.confidence === "number" ? primary.confidence : null;
+    renderResult(out.reply, outcome, conf, primary);
+
+  } catch (err) {
+    showErrorCard(err.message, false);
+  } finally {
+    _inFlight = false;
+    btn.disabled = false;
+    $("btn-icon").innerHTML  = "&#x1F50D;";
+    $("btn-text").textContent = "Review Permission";
+  }
+}
+
+function showErrorCard(msg, isBackend) {
+  const label = isBackend ? "Backend error" : "Connection error";
+  $("result-area").innerHTML = `
+    <div class="result-card" style="margin-top:20px;">
+      <div class="result-body">
+        <p style="color:var(--red)" role="alert"><strong>${esc(label)}:</strong> ${esc(msg)}</p>
+        <div class="banner banner-red">
+          &#9888; The review could not be completed.
+          Please retry or ask your security team to review this manually.
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderResult(reply, outcome, conf, dec) {
+  const valid       = outcome && ["allow","clarify","human_review"].includes(outcome);
+  const pillClass   = valid ? `pill-${outcome}` : "pill-unavailable";
+  const pillLabel   = valid ? outcome.replace("_"," ") : "Decision unavailable";
+
+  let confHtml;
+  if (!valid || conf === null || conf === undefined) {
+    confHtml = `<div class="conf-label">Decider confidence: N/A</div>`;
+  } else {
+    const pct   = Math.round(conf * 100);
+    const color = conf >= 0.7 ? "var(--green)" : conf >= 0.45 ? "var(--amber)" : "var(--red)";
+    confHtml = `
+      <div class="conf-track">
+        <div class="conf-fill" style="width:${pct}%;background:${color}"
+          role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+      <div class="conf-label">Decider confidence: ${pct}%</div>`;
+  }
+
+  let banner = "";
+  if (!valid) {
+    banner = `<div class="banner banner-red" role="alert">
+      &#9888; Decider result is unavailable — do not treat this as an approval.
+      Human review is required before applying any permission change.
+    </div>`;
+  } else if (outcome === "human_review") {
+    banner = `<div class="banner banner-red" role="alert">
+      &#9888; Human review required. Do not apply these permissions without approval from your security team.
+    </div>`;
+  } else if (outcome === "clarify") {
+    banner = `<div class="banner banner-amber" role="alert">
+      &#9432; More information is needed before this permission can be safely reviewed.
+    </div>`;
+  }
+
+  $("result-area").innerHTML = `
+    <div class="result-card" role="region" aria-label="Review decision">
+      <div class="result-header">
+        <span class="result-header-label">Decision Result</span>
+        <span class="outcome-pill ${pillClass}" aria-label="Outcome: ${esc(pillLabel)}">${esc(pillLabel)}</span>
+      </div>
+      <div class="result-body">
+        <div class="result-section">${confHtml}</div>
+        <div class="result-section">
+          <h4>LLM Analysis</h4>
+          <p>${esc(reply)}</p>
+        </div>
+        ${dec.proposed_action ? `
+        <div class="result-section">
+          <h4>Proposed IAM Action</h4>
+          <div class="code-block">${esc(dec.proposed_action)}</div>
+        </div>` : ""}
+        ${banner}
+        <div class="banner banner-orange" role="note">
+          All results are recommendations only. CloudGuard AI never creates or modifies real AWS IAM permissions.
+          Review with your security team before applying any changes.
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderDecision(rec) {
+  const panel = $("dec");
+  if (panel.querySelector(".dec-empty")) panel.innerHTML = "";
+  decCount++;
+  $("dec-count").textContent = decCount + " decision" + (decCount === 1 ? "" : "s");
+
+  const verdict = rec.verdict || rec.outcome || rec.action || rec.tier || "";
+  const title   = rec.pattern || "permission review";
+  const probs   = Object.entries(rec).filter(([k, v]) =>
+    typeof v === "number" && v >= 0 && v <= 1 && !k.endsWith("_ms") && k !== "confidence");
+  const rest    = Object.entries(rec).filter(([k, v]) =>
+    !(typeof v === "number" && v >= 0 && v <= 1) &&
+    !["verdict","outcome","action","tool","stage","pattern","proposed_action"].includes(k));
+  const barColor = v => v >= 0.6 ? "var(--green)" : v >= 0.4 ? "var(--amber)" : "var(--red)";
+
+  const el = document.createElement("div");
+  el.className = "d";
+  el.setAttribute("role", "article");
+  el.setAttribute("aria-label", `Decision: ${title}, outcome: ${verdict}`);
+  el.innerHTML = `
+    <div class="d-head">
+      <span class="d-title">${esc(title)}</span>
+      <span class="d-tag ${esc(verdict)}">${esc(verdict)}</span>
+    </div>
+    ${probs.map(([k, v]) => `
+      <div class="prob-row">
+        <span>${esc(k)}</span>
+        <span class="prob-bar"><div class="prob-fill" style="width:${v*100}%;background:${barColor(v)}"></div></span>
+        <span>${v.toFixed(2)}</span>
+      </div>`).join("")}
+    <div class="d-meta">${rest.map(([k,v]) =>
+      `${esc(k)}: ${esc(typeof v === "object" ? JSON.stringify(v) : v)}`
+    ).join(" &middot; ")}</div>`;
+  panel.prepend(el);
+}
+
+// Ctrl/Cmd+Enter to submit
+$("req-input").addEventListener("keydown", e => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submitReview();
+});
+</script>
+</body>
+</html>

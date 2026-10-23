@@ -1,0 +1,14 @@
+# Amazon Bedrock AgentCore features for CloudGuard AI.
+# ./kit deploy reads this and adds enabled features to deploy/agentcore/agentcore.json.
+
+memory:                    # AgentCore Memory: not needed — reviews are stateless
+  enabled: false
+  name: cloudguardmemory
+  strategies: [SEMANTIC, USER_PREFERENCE]
+  expiry_days: 30
+
+gateway:                   # AgentCore Gateway: not needed — no external APIs required
+  enabled: false
+  name: tools
+  authorizer: AWS_IAM
+  targets: []
