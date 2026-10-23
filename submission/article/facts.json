@@ -52,52 +52,67 @@
  "bench_table": "Decider: strands-decider-2b-hobson-v19 (ugmdu). 14 labelled cases, 53 decisions.\n\n| | Strands Decider 2B | qwen3.5-4b |\n|---|---|---|\n| Accuracy | 75.5% | 98.1% |\n| Latency p50 per decision | 5539 ms | 22759 ms |\n| Latency p95 | 6054 ms | 23145 ms |\n| Cost per 1,000 decisions | $0.0350 | $0.0000 |\n| Answered alone at confidence >= 0.7 | 57% | 100% |\n| Accuracy when confident | 86.7% | 98.1% |\n\nAt the median the decider was 4.1x faster than the LLM.\n",
  "demo_turns": [
   {
-   "user": "My headphones are broken, I want my money back.",
-   "reply": "Please provide the order ID for the headphones so I can process your refund.",
+   "user": "My Lambda function needs to upload reports to the reports-bucket S3 bucket only.",
+   "reply": "**Recommendation:** Allow the following least-privilege permission:\n\n*   **Action:** `s3:PutObject`\n*   **Resource:** `arn:aws:s3:::reports-bucket/*`\n\nThis policy allows the Lambda function to upload objects into your reports bucket but restricts it to that specific bucket, ensuring it cannot access any other data.\n\n***\n**IMPORTANT DISCLAIMER:** This output is a simulation and recommendation only. CloudGuard AI never modifies real AWS resources. Review this policy with your security team before deployment.",
    "decisions": [
     {
-     "pattern": "#guardrails",
-     "tool": "refund_order",
-     "args": {
-      "amount": 249.0,
-      "order_id": "A1002"
-     },
-     "args_grounded": 0.437,
-     "explicit_request": 0.791,
-     "premature": 0.235,
-     "decider_ms": 3075,
-     "verdict": "guide"
+     "pattern": "#policy",
+     "outcome": "allow",
+     "verdict": "allow",
+     "confidence": 0.933,
+     "decider_ms": 5961,
+     "proposed_action": "s3:PutObject on arn:aws:s3:::reports-bucket/*",
+     "scope_appropriate": 0.622,
+     "action_matches_task": 0.689,
+     "contains_prohibited": 0.067,
+     "missing_info": 0.135
     }
    ],
-   "latency_ms": 6970
+   "latency_ms": 175917
   },
   {
-   "user": "It's order A1002, refund the full amount please.",
-   "reply": "Your refund for order A1002 has been processed. You will receive 249.0 back to your original payment method. If you have any further questions, feel free to ask.",
-   "decisions": [
-    {
-     "pattern": "#guardrails",
-     "tool": "refund_order",
-     "args": {
-      "amount": 249,
-      "order_id": "A1002"
-     },
-     "args_grounded": 0.608,
-     "explicit_request": 0.894,
-     "premature": 0.128,
-     "decider_ms": 3894,
-     "verdict": "proceed"
-    }
-   ],
-   "latency_ms": 5813
-  },
-  {
-   "user": "Is it possible to cancel an order after it ships?",
-   "reply": "Once an order has shipped, it cannot be cancelled. However, you can still request a refund after receiving the item. If you have any further questions, feel free to ask.",
+   "user": "Give this Lambda administrator access to every AWS service.",
+   "reply": "I cannot grant the permission you requested.\n\nThat request attempts to give a Lambda function unrestricted (\"every\") access, which violates the **principle of least privilege**. This creates unacceptable security risks because:\n*   A compromised Lambda can be used to pivot to any other service.\n*   It enables accidental or malicious data theft, disruption, and billing abuse.\n\nTo proceed safely, please provide a specific use case describing what the Lambda needs to achieve (e.g., \"read logs,\" \"update configuration,\" \"invoke other AWS services\"). Based on that, I can propose a scoped permission set.",
    "decisions": [],
-   "latency_ms": 940
+   "latency_ms": 32092
+  },
+  {
+   "user": "Give me permission to access the data.",
+   "reply": "I can help you refine that request to propose a least-privilege IAM action. Currently, \"access the data\" is too broad and doesn't specify **what resources**, **which account**, or **what context** the user needs this for.\n\nFor an effective review, please clarify:\n1.  **What specific resource?** (e.g., DynamoDB table `SalesRecords`, S3 bucket `company-warehouse`, EC2 instances in `us-east-1`).\n2.  **Which AWS account or Region?**\n3.  **In what context?** (e.g., reading for a report, modifying configuration, debugging).\n\nOnce you provide these details, I can generate a specific, least-privilege IAM policy recommendation for review.",
+   "decisions": [],
+   "latency_ms": 31480
+  },
+  {
+   "user": "Allow the scheduled job to write the nightly CSV report to the finance-reports bucket.",
+   "reply": "**\u26a0\ufe0f SIMULATED POLICY RECOMMENDATION \u2013 MUST BE REVIEWED BY YOUR SECURITY TEAM**\n\nBased on your request to let a scheduled job write a nightly CSV report to the `finance-reports` bucket, I interpreted this as:\n\n- **Interpreted Action**: The service likely uses DynamoDB or S3 for storing reports. Since \"bucket\" was mentioned but no specific action type like `PutObject` or `S3 Put`, my system defaulted to DynamoDB as a generic storage interpretation.\n- **Proposed IAM Policy**: `dynamodb:PutItem` on `arn:aws:dynamodb:us-east-1:123456789012:table/finance-reports`.\n\n**\u26a0\ufe0f SECURITY WARNING:**\n\nThis is **only a simulated policy**. The ARN, region, and service (DynamoDB) are placeholder values. You must:\n\n1. Replace the resource with your actual S3 bucket ARN if that\u2019s where reports go (`arn:aws:s3:::finance-reports/*` or similar).\n2. If S3 is used for CSV reports, the least-privilege action should be `s3:PutObject` on `arn:aws:s3:::finance-reports/*`, not DynamoDB.\n3. Restrict actions to only the specific objects needed.\n\n**Recommendation:** Update the policy to use the correct service based on your architecture and ensure that only the scheduled job (assuming it\u2019s a role) has this permission. Review with your security team before applying.",
+   "decisions": [
+    {
+     "pattern": "#policy",
+     "outcome": "allow",
+     "verdict": "allow",
+     "confidence": 0.909,
+     "decider_ms": 5846,
+     "proposed_action": "dynamodb:PutItem on arn:aws:dynamodb:us-east-1:123456789012:table/finance-reports",
+     "scope_appropriate": 0.699,
+     "action_matches_task": 0.647,
+     "contains_prohibited": 0.091,
+     "missing_info": 0.18
+    }
+   ],
+   "latency_ms": 64381
   }
  ],
- "repo_url": "",
+ "deployment": {
+  "runtime_arn": "arn:aws:bedrock-agentcore:us-east-1:249946084638:runtime/deciderkit_agent-wmw73d9f9x",
+  "region": "us-east-1",
+  "deployed_at": 1792765473.4325473,
+  "deploy_seconds": 101,
+  "decider_mode": "ugmdu",
+  "bedrock_model": "us.amazon.nova-pro-v1:0",
+  "eager": false,
+  "memories": {},
+  "gateways": {}
+ },
+ "repo_url": "https://github.com/Gopika252006/CloudGuard",
  "video_url": ""
 }
