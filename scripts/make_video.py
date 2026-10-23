@@ -177,15 +177,28 @@ def record(script: dict, port: int, workdir: Path) -> tuple[Path, list[dict]]:
         for i, turn in enumerate(script["turns"]):
             start = time.time() - t0
             imgs = turn.get("image") or turn.get("images") or []
-            if imgs:  # attach the photo(s) with the paperclip, as a user would
+            if imgs and pg.locator("#img").count() > 0:
                 pg.set_input_files("#img", [str(ROOT / x) for x in ([imgs] if isinstance(imgs, str) else imgs)])
                 pg.wait_for_timeout(900)
+            # Support both the old chat UI (#m) and the CloudGuard single-page UI (#req-input)
+            input_sel = "#req-input" if pg.locator("#req-input").count() > 0 else "#m"
+            submit_sel = "#review-btn" if input_sel == "#req-input" else None
             with pg.expect_response(lambda r: "/api/chat" in r.url, timeout=180_000) as resp:
-                pg.fill("#m", "")
-                pg.type("#m", turn["say"], delay=28)
-                pg.press("#m", "Enter")
+                pg.fill(input_sel, "")
+                pg.type(input_sel, turn["say"], delay=28)
+                if submit_sel:
+                    pg.click(submit_sel)
+                else:
+                    pg.press(input_sel, "Enter")
             out = resp.value.json()
-            pg.wait_for_function(f"document.body.dataset.turns >= {i + 1}", timeout=30_000)
+            # Wait for the result card or the turn counter (whichever is present)
+            try:
+                pg.wait_for_selector(".result-card", timeout=30_000)
+            except Exception:  # noqa: BLE001
+                try:
+                    pg.wait_for_function(f"document.body.dataset.turns >= {i + 1}", timeout=10_000)
+                except Exception:  # noqa: BLE001
+                    pg.wait_for_timeout(3000)
             pg.wait_for_timeout(1800)
             marks.append({"start": start, "end": time.time() - t0, "out": out, **turn})
         pg.wait_for_timeout(800)
